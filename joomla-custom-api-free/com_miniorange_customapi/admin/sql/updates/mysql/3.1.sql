@@ -1,0 +1,2 @@
+ALTER TABLE `#__miniorange_customapi_settings` ADD COLUMN `uninstall_feedback` int(2)  NOT NULL;
+ALTER TABLE `#__miniorange_customapi_customer_details` ADD COLUMN `admin_email` VARCHAR(255)  NOT NULL;

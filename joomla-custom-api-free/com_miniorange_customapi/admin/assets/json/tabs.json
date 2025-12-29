@@ -1,0 +1,30 @@
+{
+    "custom_api_overview": {
+        "id": "custom_api_overview",
+        "href": "#customapi_plugin_overview",
+        "label": "COM_MINIORANGE_API_PLUGIN_OVERVIEW",
+        "icon":"fa-list-alt",
+        "active": false
+    },
+    "show_custom_apis": {
+        "id": "show_custom_apis",
+        "href": "#view_all_apis",
+        "label": "COM_MINIORANGE_API_TAB2_SETTINGS",
+        "icon":"fa-database",
+        "active": false
+    },
+    "add_authentication": {
+        "id": "add_authentication",
+        "href": "#add_authentication_to_api",
+        "label": "COM_MINIORANGE_API_TAB4_SETTINGS",
+        "icon":"fa-check",
+        "active": false
+    },
+    "external_apis": {
+        "id": "external_apis",
+        "href": "#connect_external_apis",
+        "label": "COM_MINIORANGE_API_TAB5_SETTINGS",
+        "icon":"fa-up-right-from-square",
+        "active": false
+    }
+}
