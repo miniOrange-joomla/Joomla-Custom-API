@@ -14,6 +14,13 @@ CREATE TABLE IF NOT EXISTS `#__miniorange_customapi_customer_details` (
 `email_count` int(11),
 `sms_count` int(11),
 `admin_email` VARCHAR(255)  NOT NULL,
+`custom_api_lc_key` VARCHAR(255) NOT NULL,
+`licenseExpiry` TIMESTAMP NULL DEFAULT NULL,
+`supportExpiry` TIMESTAMP NULL DEFAULT NULL,
+`licensePlan` VARCHAR(64) NOT NULL,
+`trists` TEXT NOT NULL,
+`auto_send_email_time` TEXT NOT NULL,
+`apilmt` int(11) NOT NULL,
 PRIMARY KEY (`id`)
 ) DEFAULT COLLATE=utf8_general_ci;
 
@@ -21,6 +28,23 @@ CREATE TABLE IF NOT EXISTS `#__miniorange_customapi_settings` (
 `id` int(11) UNSIGNED NOT NULL,
 `mo_custom_apis` text NOT NULL,
 `uninstall_feedback` int(2),
+`mo_custom_sql_apis` text NOT NULL,
+`mo_external_apis` text NOT NULL,
+`mo_rest_api_auth` text NOT NULL,
+`enable_token_based_auth` int(11) UNSIGNED NOT NULL,
+`mo_auth_methods` text NOT NULL,
+`mo_auth_token` text NOT NULL,
+`mo_jwt_token` text NOT NULL,
+`mo_username` text NOT NULL,
+`mo_password` text NOT NULL,
+`mo_authMethod` text NOT NULL,
+`mo_signing_algorithm` text NOT NULL,
+`mo_email` text NOT NULL,
+`mo_expiry_time` text NOT NULL,
+`mo_public_key` text NOT NULL,
+`mo_private_key` text NOT NULL,
+`mo_secret_key` text NOT NULL,
+`mo_api_keys` text NOT NULL,
 PRIMARY KEY (`id`)
 ) DEFAULT COLLATE=utf8_general_ci;
 

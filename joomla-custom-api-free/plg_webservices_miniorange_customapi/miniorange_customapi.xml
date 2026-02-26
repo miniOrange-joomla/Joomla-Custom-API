@@ -7,7 +7,7 @@
 	<authorUrl>https://www.miniorange.com/</authorUrl>
 	<creationDate>March 2023</creationDate>
 	<copyright>Copyright(C) 2015 miniOrange. All Rights Reserved.</copyright>
-	<version>3.6</version>
+	<version>3.7</version>
     <description>PLG_WEBSERVICE_CUSTOMAPI_XML_DESCRIPTION</description>
     <files>
         <filename plugin="miniorange_customapi">miniorange_customapi.php</filename>

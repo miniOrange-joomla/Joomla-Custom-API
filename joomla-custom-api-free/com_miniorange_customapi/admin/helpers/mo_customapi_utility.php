@@ -18,6 +18,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Version;
 use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseInterface;
 
 class MocustomapiUtility
 {
@@ -36,9 +37,20 @@ class MocustomapiUtility
         }
     }
 
+    public static function moGetDatabase()
+    {
+        // Joomla 4+
+        if (class_exists(DatabaseInterface::class) && method_exists(Factory::class, 'getContainer')) {
+            return Factory::getContainer()->get(DatabaseInterface::class);
+        }
+
+        // Joomla 3 fallback
+        return Factory::getDbo();
+    }
+
     public static function GetPluginVersion()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $dbQuery = $db->getQuery(true)
             ->select('manifest_cache')
             ->from($db->quoteName('#__extensions'))
@@ -71,7 +83,7 @@ class MocustomapiUtility
 	}
     public static function getUserId($username)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true)
             ->select($db->quoteName('id'))
             ->from($db->quoteName('#__users'))
@@ -104,7 +116,7 @@ class MocustomapiUtility
 
     public static function getConfiguration()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName('#__miniorange_customapi_settings'));
@@ -183,7 +195,7 @@ class MocustomapiUtility
 
     public static function getCustomerDetails()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName('#__miniorange_customapi_customer_details'));
@@ -210,7 +222,7 @@ class MocustomapiUtility
 
     public static function getCustomerToken()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('customer_token');
         $query->from($db->quoteName('#__miniorange_customapi_customer_details'));
@@ -245,7 +257,7 @@ class MocustomapiUtility
     }
 
     public static function loadGroups(){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $db->setQuery($db->getQuery(true)
             ->select('*')
             ->from("#__usergroups")
@@ -266,7 +278,7 @@ class MocustomapiUtility
 
     public static function generic_update_query($database_name, $updatefieldsarray){
 
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         foreach ($updatefieldsarray as $key => $value)
         {
@@ -277,6 +289,7 @@ class MocustomapiUtility
         $db->execute();
     }
 
+
     public static function fetch_api_info($api_name, $type){
         $plugin_settings=self::getConfiguration();
         $api_configuration=json_decode($plugin_settings['mo_custom_apis']);
@@ -286,6 +299,29 @@ class MocustomapiUtility
              foreach($api_configuration as $key=>$value){
                  if($api_name==$key)
                  {
+                     // Normalize the API configuration for compatibility with premium version
+                     if (is_object($value)) {
+                         if (isset($value->col_condition) && !is_array($value->col_condition)) {
+                             $value->col_condition = is_string($value->col_condition) ? array($value->col_condition) : array();
+                         } elseif (!isset($value->col_condition)) {
+                             $value->col_condition = array();
+                         }
+                         if (isset($value->col_condition_name) && !is_array($value->col_condition_name)) {
+                             $value->col_condition_name = is_string($value->col_condition_name) ? array($value->col_condition_name) : array();
+                         } elseif (!isset($value->col_condition_name)) {
+                             $value->col_condition_name = array();
+                         }
+                         if (isset($value->param_value) && !is_array($value->param_value)) {
+                             $value->param_value = is_string($value->param_value) ? array($value->param_value) : array();
+                         } elseif (!isset($value->param_value)) {
+                             $value->param_value = array();
+                         }
+                         if (isset($value->SelectedColumn) && !is_array($value->SelectedColumn)) {
+                             $value->SelectedColumn = is_string($value->SelectedColumn) ? array($value->SelectedColumn) : array();
+                         } elseif (!isset($value->SelectedColumn)) {
+                             $value->SelectedColumn = array();
+                         }
+                     }
                      return $value;
                  }
              }
@@ -510,17 +546,34 @@ class MocustomapiUtility
 
     public static function api_get_request($api_information,$get_param)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
-        $query->select($db->quoteName($api_information->SelectedColumn));
+        
+        // Handle SelectedColumn - can be string or array (for backward compatibility)
+        if (is_array($api_information->SelectedColumn)) {
+            $query->select($db->quoteName($api_information->SelectedColumn));
+        } else {
+            // If it's a string, convert to array for quoteName
+            $query->select($db->quoteName($api_information->SelectedColumn));
+        }
+        
         $query->from($db->quoteName($api_information->table_name));
-        if($api_information->col_condition!='None Selected')
+        
+        // Handle col_condition - can be string or array (for backward compatibility)
+        $col_condition = is_array($api_information->col_condition) ? 
+            (isset($api_information->col_condition[0]) ? $api_information->col_condition[0] : 'None Selected') : 
+            $api_information->col_condition;
+        $col_condition_name = is_array($api_information->col_condition_name) ? 
+            (isset($api_information->col_condition_name[0]) ? $api_information->col_condition_name[0] : 'no condition') : 
+            $api_information->col_condition_name;
+        
+        if($col_condition!='None Selected' && !empty($col_condition))
         {
-            if($api_information->col_condition_name=='Less Than')
+            if($col_condition_name=='Less Than')
             {
-                $api_information->col_condition_name="<";
+                $col_condition_name="<";
             }
-            $query->where($db->quoteName($api_information->col_condition) . $api_information->col_condition_name . $db->quote($get_param[$api_information->col_condition]));
+            $query->where($db->quoteName($col_condition) . $col_condition_name . $db->quote($get_param[$col_condition]));
         }
 
         try {
@@ -597,10 +650,25 @@ class MocustomapiUtility
 
     public static function create_request_parameter_string($customparams)
 	{
+		// Handle both string and array inputs for compatibility
+		if (empty($customparams)) {
+			return '';
+		}
+		
+		// Convert string to array if needed
+		if (!is_array($customparams) && !($customparams instanceof \Countable)) {
+			if (is_string($customparams)) {
+				$customparams = array($customparams);
+			} else {
+				return '';
+			}
+		}
+		
 		$custom_data='';
-		for ($i=0; $i< sizeof($customparams); $i++) {
+		$count = is_array($customparams) ? count($customparams) : sizeof($customparams);
+		for ($i=0; $i< $count; $i++) {
 			$custom_data = $custom_data . $customparams[$i] . '={' . $customparams[$i] . '_value}';
-			if($i != sizeof($customparams) - 1){
+			if($i != $count - 1){
 				$custom_data = $custom_data . '& ';
 			}                
 		}
@@ -676,7 +744,7 @@ class MocustomapiUtility
 
     public function load_database_values($table)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName($table));
@@ -707,6 +775,40 @@ class MocustomapiUtility
         }
 
         return 'Unknown';
+    }
+
+    /**
+     * Formats timezone as: America/Chicago (UTC -06:00)
+     * If $browserOffsetMinutes is provided (JS Date.getTimezoneOffset), it is used; otherwise server computes offset (DST-safe).
+     */
+    public static function format_timezone_with_utc_offset($tzName, $browserOffsetMinutes = null)
+    {
+        $tzName = trim((string) $tzName);
+        if ($tzName === '') {
+            $tzName = 'UTC';
+        }
+
+        if ($browserOffsetMinutes !== null && preg_match('/^-?\d+$/', (string) $browserOffsetMinutes)) {
+            $m = (int) $browserOffsetMinutes; // minutes behind UTC
+            $sign = $m > 0 ? '-' : '+';
+            $abs = abs($m);
+            $hh = str_pad((string) floor($abs / 60), 2, '0', STR_PAD_LEFT);
+            $mm = str_pad((string) ($abs % 60), 2, '0', STR_PAD_LEFT);
+            return $tzName . ' (UTC ' . $sign . $hh . ':' . $mm . ')';
+        }
+
+        try {
+            $tzObj = new \DateTimeZone($tzName);
+            $dt = new \DateTime('now', $tzObj);
+            $offsetSeconds = (int) $dt->getOffset();
+            $sign = $offsetSeconds >= 0 ? '+' : '-';
+            $abs = abs($offsetSeconds);
+            $hh = str_pad((string) floor($abs / 3600), 2, '0', STR_PAD_LEFT);
+            $mm = str_pad((string) floor(($abs % 3600) / 60), 2, '0', STR_PAD_LEFT);
+            return $tzName . ' (UTC ' . $sign . $hh . ':' . $mm . ')';
+        } catch (\Exception $e) {
+            return 'UTC (UTC +00:00)';
+        }
     }
 
     public static function send_efficiency_mail($fromEmail, $content)
@@ -759,7 +861,7 @@ class MocustomapiUtility
     }
 
     public static function loadDBValues($table, $load_by, $col_name = '*', $id_name = 'id', $id_value = 1){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
 
         $query->select($col_name);

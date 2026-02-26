@@ -23,6 +23,7 @@ $document = Factory::getDocument();
 $document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/bootstrap-multiselect.js');
 $document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/bootstrap-select-min.js');
 $document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/bootstrap-min.js');
+$document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/countries.js');
 $document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/utility.js');
 $document->addScript(Uri::base() . 'components/com_miniorange_customapi/assets/js/bootstrap.js');
 $document->addScript('https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js');
@@ -234,34 +235,24 @@ function support_form()
 
                             <div class="mo_boot_mb-3">
                                 <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_NUMBER');?>:</h4>
-                                <div class="mo_boot_d-flex">
-                                    <select class="mo-form-control-select mo-form-control" name="country_code" style="flex: 0 0 80px;">
-                                        <option value="+1">+1</option>
-                                        <option value="+44">+44</option>
-                                        <option value="+91">+91</option>
-                                        <option value="+33">+33</option>
-                                        <option value="+49">+49</option>
-                                        <option value="+86">+86</option>
-                                        <option value="+81">+81</option>
-                                        <option value="+7">+7</option>
-                                        <option value="+55">+55</option>
-                                        <option value="+39">+39</option>
-                                        <option value="+34">+34</option>
-                                        <option value="+31">+31</option>
-                                        <option value="+46">+46</option>
-                                        <option value="+47">+47</option>
-                                        <option value="+45">+45</option>
-                                        <option value="+41">+41</option>
-                                        <option value="+43">+43</option>
-                                        <option value="+32">+32</option>
-                                        <option value="+351">+351</option>
-                                        <option value="+30">+30</option>
-                                        <option value="+66">+66</option>
-                                        <option value="+420">+420</option>
-                                        <option value="+381">+381</option>
-                                        <option value="+36">+36</option>
-                                    </select>
-                                    <input type="tel" class="mo-form-control mo_boot_flex-fill" name="query_phone" placeholder="<?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_PLACEHOLDER');?>">
+                                <div class="mo_boot_row mo-phone-inline-row" data-mo-phone-dropdown>
+                                    <div class="mo_boot_col-4">
+                                        <div class="mo-phone-card">
+                                            <div class="mo-country-select">
+                                                <span class="flag" aria-hidden="true"></span>
+                                                <span class="dial-code">+91</span>
+                                                <span class="arrow">▾</span>
+                                            </div>
+                                            <ul class="mo-country-list"></ul>
+
+                                            <input type="hidden" name="country_code" class="mo-country-code" value="91">
+                                            <input type="hidden" name="client_timezone" class="mo-client-timezone" value="">
+                                            <input type="hidden" name="client_timezone_offset" class="mo-client-timezone-offset" value="">
+                                        </div>
+                                    </div>
+                                    <div class="mo_boot_col-8">
+                                        <input type="tel" class="mo-form-control mo_boot_flex-fill" name="query_phone" placeholder="<?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_PLACEHOLDER');?>">
+                                    </div>
                                 </div>
                             </div>
 
@@ -520,7 +511,7 @@ function show_all_custom_apis()
     if ($is_api_exists) {
         $existingApis = json_decode($plugin_settings['mo_custom_apis'], true);
         if (is_array($existingApis) && count($existingApis) >= 5) {
-            $can_create_api = false; // 5 or more APIs exist — restrict creation
+            $can_create_api = false;
         }
     }
     ?>
@@ -602,9 +593,11 @@ function show_all_custom_apis()
                     <?php
                     }else{
                     ?>
-                    <div class="mo_boot_text-center">
-                        <img src="<?php echo Uri::base(); ?>components/com_miniorange_customapi/assets/images/custom.png" alt="Custom">
-                        <p class="mo_boot_mt-2"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CREATE');?>&nbsp;<a class="mo_boot_btn btn-users_sync" href="<?php echo Uri::root().'administrator/index.php?option=com_miniorange_customapi&view=accountsetup&tab-panel=create_custom_api'; ?>"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CLICK');?></p>
+                    <div class="mo_boot_col-sm-12 mo_boot_p-0">
+                        <h4 class="mo_boot_mt-2"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CREATE');?></h4>
+                    </div>
+                    <div class="mo_boot_col-sm-12 mo_boot_text-center">
+                        <a class="mo_boot_btn btn-users_sync mo_boot_p-2 mo_customapi_font-size" href="<?php echo Uri::root().'administrator/index.php?option=com_miniorange_customapi&view=accountsetup&tab-panel=create_custom_api'; ?>">&plus;&nbsp;<?php echo Text::_('COM_MINIORANGE_API_TAB2_SETTINGS');?></a>
                     </div>
                     <?php 
                 }?>
@@ -617,7 +610,7 @@ function show_all_custom_apis()
 //Create the custom API
 function create_custom_apis()
 {
-    $db=Factory::getDBO();
+    $db = MocustomapiUtility::moGetDatabase();
     $allTables = $db->getTableList();
     $prefix = $db->getPrefix();
     $disablePrefixes = ['user_','users','usergroups',];
@@ -643,24 +636,25 @@ function create_custom_apis()
     } else {
         $columnArr = [];
     }
+    $tab_name='show_custom_apis';
     ?>
     <div class="mo_boot_container mo_customapi_main_section">
         <div class="mo_boot_row mo_boot_mo_boot_justify-content-center">
             <div class="mo_boot_col-md-12">
                 <div class="mo_boot_d-flex mo_boot_justify-content-between mo_boot_align-items-center mo_boot_mb-3">
-                    <div class="mo_boot_d-flex mo_boot_align-items-center">
-                        <h4 class="mo_boot_mb-0 mo_boot_me-2">
-                            <?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CREATE_CUSTOM_API');?>
-                        </h4>
+                    <div class="mo_boot_d-flex">
+                         <h4><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CREATE_CUSTOM_API');?></h4>
+                         <div class="mo_custom_api_info_link mo_tooltip mo_boot_mx-2">
+                            <a href="https://plugins.miniorange.com/setup-custom-api-for-joomla#step2" target="_blank">
+                                <?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_SETUP_GUIDE'); ?>
+                            </a>
+                            <span class="mo_tooltiptext">
+                                <?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_LIST_CUSTOM_API_TEXT'); ?>
+                            </span>
+                        </div>
                     </div>
-
-                    <div class="mo_custom_api_info_link mo_tooltip">
-                        <a href="https://plugins.miniorange.com/setup-custom-api-for-joomla#step2" target="_blank">
-                            <?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_SETUP_GUIDE'); ?>
-                        </a>
-                        <span class="mo_tooltiptext">
-                            <?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_LIST_CUSTOM_API_TEXT'); ?>
-                        </span>
+                    <div class="mo_boot_col-sm-4">
+                        <a class="mo_boot_btn mo_boot_btn-danger mo_customapi_float_right" href="<?php echo Uri::root().'administrator/index.php?option=com_miniorange_customapi&view=accountsetup&tab-panel='.$tab_name.''; ?>"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CLOSE');?></a>
                     </div>
                 </div>
 
@@ -982,7 +976,7 @@ function create_custom_apis()
                     </div>
                     <div class="mo_customapi_form_wrapper mo_boot_mt-2" id="conditions_section">
                         <div class="mo_boot_p-4">
-                            <div class="mo_boot_row mo_boot_mt-4">
+                            <div class="mo_boot_row">
                                 <div class="mo_boot_col-5 mo_boot_m-0">
                                     <h4><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CONDITION');?>
                                         <sup style="vertical-align: super; padding:0 px;">
@@ -1037,8 +1031,7 @@ function create_custom_apis()
                     </div>
                     <div class="mo_customapi_form_wrapper mo_boot_mt-2" id="filters_section">
                         <div class="mo_boot_p-4">
-                            <div class="">
-                                <div class="mo_boot_row mo_boot_mt-5">
+                                <div class="mo_boot_row">
                                     <div class="mo_boot_col-4">
                                         <h4><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_SELECT_FILTER');?> <sup style="vertical-align: super; padding:0 px;">
                                         <a class="mo_custom_api_info_link mo_tooltip" onclick="moCustomUpgrade()" style="text-decoration: none;">
@@ -1092,7 +1085,6 @@ function create_custom_apis()
                                         </select>
                                     </div>
                                 </div>
-                            </div>
                         </div>
                     </div>    
                     <div class="mo_customapi_form_wrapper mo_boot_mt-2">
@@ -1449,9 +1441,18 @@ function view_current_custom_api()
         $tab_name='show_custom_apis';
         $table_name=$api_configuration->table_name;
         $custom_data='';
-        if(!empty($api_configuration->col_condition) && ($api_configuration->col_condition!='None Selected'))
+        // Handle col_condition - can be string or array (for backward compatibility)
+        $col_condition = 'None Selected';
+        if (isset($api_configuration->col_condition)) {
+            if (is_array($api_configuration->col_condition)) {
+                $col_condition = isset($api_configuration->col_condition[0]) ? $api_configuration->col_condition[0] : 'None Selected';
+            } else {
+                $col_condition = $api_configuration->col_condition;
+            }
+        }
+        if(!empty($col_condition) && ($col_condition!='None Selected'))
         {
-            $custom_data.=$api_configuration->col_condition.'={' . $api_configuration->col_condition . '_value}';;
+            $custom_data.=$col_condition.'={' . $col_condition . '_value}';
         }
     }
     ?>
@@ -1513,31 +1514,6 @@ function view_current_custom_api()
                         </tr>
                     </table>
                 </div>
-
-                <?php 
-                if($tab_name=='show_custom_apis')
-                { ?>
-                    <div class="mo_boot_row mo_boot_mt-5 mo_boot_m-0 mo_boot_p-0"> 
-                        <div class="mo_cusotm_view_api_table_top">
-                            <h4><strong><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_REQUEST_FORMAT');?></strong></h4>
-                        </div>
-                        <table class="mo_customapi_table_wrapper mo_boot_table mo_boot_table-bordered mo_boot_col-12 mo_boot_p-2">
-                            <tr>
-                                <td class="mo_boot_col-sm-2"><strong><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_COLUMN_NAME');?></strong></td>
-                                <td class="mo_boot_col-sm-2"><strong><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_DESCRIPTION');?></strong></td>
-                                <td class="mo_boot_col-sm-3"><strong><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_CODITAS_APPLIED');?></strong></td>
-                                <td class="mo_boot_col-sm-3"><strong><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PARAMETER_PLACE');?></strong></td>
-                            </tr>
-                            <tr>
-                                <td class="mo_boot_col-sm-2"><?php  if(!empty($api_configuration->col_condition)){ echo ($api_configuration->col_condition!='None Selected')?$api_configuration->col_condition:'--'; }else{echo '--';} ?> </td>
-                                <td class="mo_boot_col-sm-2"><?php  if(!empty($api_configuration->col_condition)){ echo ($api_configuration->col_condition!='None Selected')?'The value of "' .$api_configuration->col_condition.'" column will be replaced with {'.$api_configuration->col_condition.'_value} in request.':'--'; }else{echo '--'; }  ?></td>
-                                <td class="mo_boot_col-sm-3s"><?php  if(!empty($api_configuration->col_condition)){ echo ($api_configuration->col_condition_name!='no condition')?$api_configuration->col_condition_name:'--';}else{echo '--'; }  ?> </td>
-                                <td class="mo_boot_col-sm-3"><?php  if(!empty($api_configuration->col_condition)){ echo ($api_configuration->col_condition!='None Selected')?'First':'--';}else{echo '--'; }  ?></td>
-                            </tr>
-
-                        </table>
-                    </div>
-                <?php }?>
         
                 <?php 
                 if($tab_name=='show_custom_apis')
@@ -1624,34 +1600,24 @@ function request_for_demo()
 
                             <div class="mo_boot_mb-3">
                                 <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_NUMBER');?>:</h4>
-                                <div class="mo_boot_d-flex">
-                                    <select class="mo-form-control-select mo-form-control mo_boot_me-2" name="country_code" style="flex: 0 0 80px;">
-                                        <option value="+1">+1</option>
-                                        <option value="+44">+44</option>
-                                        <option value="+91">+91</option>
-                                        <option value="+33">+33</option>
-                                        <option value="+49">+49</option>
-                                        <option value="+86">+86</option>
-                                        <option value="+81">+81</option>
-                                        <option value="+7">+7</option>
-                                        <option value="+55">+55</option>
-                                        <option value="+39">+39</option>
-                                        <option value="+34">+34</option>
-                                        <option value="+31">+31</option>
-                                        <option value="+46">+46</option>
-                                        <option value="+47">+47</option>
-                                        <option value="+45">+45</option>
-                                        <option value="+41">+41</option>
-                                        <option value="+43">+43</option>
-                                        <option value="+32">+32</option>
-                                        <option value="+351">+351</option>
-                                        <option value="+30">+30</option>
-                                        <option value="+66">+66</option>
-                                        <option value="+420">+420</option>
-                                        <option value="+381">+381</option>
-                                        <option value="+36">+36</option>
-                                    </select>
-                                    <input type="tel" class="mo-form-control mo_boot_flex-fill" name="query_phone" placeholder="<?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_PLACEHOLDER');?>">
+                                <div class="mo_boot_row mo-phone-inline-row" data-mo-phone-dropdown>
+                                    <div class="mo_boot_col-4">
+                                        <div class="mo-phone-card">
+                                            <div class="mo-country-select">
+                                                <span class="flag" aria-hidden="true"></span>
+                                                <span class="dial-code">+91</span>
+                                                <span class="arrow">▾</span>
+                                            </div>
+                                            <ul class="mo-country-list"></ul>
+
+                                            <input type="hidden" name="country_code" class="mo-country-code" value="91">
+                                            <input type="hidden" name="client_timezone" class="mo-client-timezone" value="">
+                                            <input type="hidden" name="client_timezone_offset" class="mo-client-timezone-offset" value="">
+                                        </div>
+                                    </div>
+                                    <div class="mo_boot_col-8">
+                                        <input type="tel" class="mo-form-control mo_boot_flex-fill" name="query_phone" placeholder="<?php echo Text::_('COM_MINIORANGE_CUSTOMAPI_PHONE_PLACEHOLDER');?>">
+                                    </div>
                                 </div>
                             </div>
 

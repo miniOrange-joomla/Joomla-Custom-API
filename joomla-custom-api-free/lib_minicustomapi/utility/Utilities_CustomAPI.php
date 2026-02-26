@@ -63,11 +63,16 @@ class Utilities_CustomAPI
 			return MocustomapiUtility::mo_api_error_msgs('INVALID_CONFIGURATION');
 		}
 
-		if ($api_information->col_condition == 'None Selected' && !empty($api_query)) {
+		// Handle col_condition - can be string or array (for backward compatibility)
+		$col_condition = is_array($api_information->col_condition) ? 
+			(isset($api_information->col_condition[0]) ? $api_information->col_condition[0] : 'None Selected') : 
+			$api_information->col_condition;
+
+		if ($col_condition == 'None Selected' && !empty($api_query)) {
 			return MocustomapiUtility::mo_api_error_msgs('INVALID_FORMAT');
 		}
 
-		if ($api_information->col_condition != 'None Selected' && empty($api_query)) {
+		if ($col_condition != 'None Selected' && empty($api_query)) {
 			return MocustomapiUtility::mo_api_error_msgs('INVALID_FORMAT');
 		}
 

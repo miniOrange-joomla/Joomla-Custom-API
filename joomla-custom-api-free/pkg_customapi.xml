@@ -3,7 +3,7 @@
 	<name>Package - miniOrange Custom API</name>
 	<packagename>customapi</packagename>
 	<license>GNU General Public License version 3; see LICENSE.txt</license>
-	<version>3.6</version>
+	<version>3.7</version>
 	<author>miniOrange Security Software Pvt. Ltd.</author>
 	<authorEmail>info@xecurify.com</authorEmail>
 	<creationDate>March 2023</creationDate>

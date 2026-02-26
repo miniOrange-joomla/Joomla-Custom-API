@@ -17,6 +17,7 @@
 defined('_JEXEC') or die('Restricted access');
 use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Version;
 
 class MocustomapiCustomer
 {
@@ -112,28 +113,48 @@ class MocustomapiCustomer
         return self::curl_call($url,$field_string);
     }
 
-    function submit_contact_us($q_email, $q_phone, $query)
+    function submit_contact_us($q_email, $q_phone, $query, $timezone = '')
     {
         if (!MocustomapiUtility::is_curl_installed()) {
             return json_encode(array("status" => 'CURL_ERROR', 'statusMessage' => '<a href="http://php.net/manual/en/curl.installation.php">PHP cURL extension</a> is not installed or disabled.'));
         }
-        $j_cms_version = MocustomapiUtility::getJoomlaCmsVersion();
-        $mo_plugin_version = MocustomapiUtility::GetPluginVersion();
-        $php_version = phpversion();
+
+        // Match UserSync "contact us" email format: /moas/api/notify/send with HTML content lines.
         $hostname = MocustomapiUtility::getHostname();
-        $url = $hostname . "/moas/rest/customer/contact-us";
-        $current_user = Factory::getUser();
-        $subject = "Query for miniOrange Joomla Custom API Free  - " .$q_email;
-        $query = '[Joomla Custom API Free: Joomla version-'. $j_cms_version . '| Plugin version-'. $mo_plugin_version . '|PHP version-'. $php_version . ':' . $query;
+        $url = $hostname . "/moas/api/notify/send";
+
+        $fromEmail = $q_email;
+        $phpVersion = phpversion();
+        $jCmsVersion = MocustomapiUtility::getJoomlaCmsVersion();
+        $moPluginVersion = MocustomapiUtility::GetPluginVersion();
+        $subject = "Query for miniOrange Joomla Custom API Free - " . $fromEmail;
+
+        $currentUser = Factory::getUser();
+        $adminEmail = $currentUser->email;
+        $timezoneSafe = htmlspecialchars(trim((string) $timezone));
+
+        $queryWithMeta = '[miniOrange Joomla Custom API Free | ' . $phpVersion . ' | ' . $jCmsVersion . ' | ' . $moPluginVersion . '] ' . $query;
+
+        $content = '<div >Hello, <br><br>
+                    <strong>Company</strong> :<a href="' . $_SERVER['SERVER_NAME'] . '" target="_blank" >' . $_SERVER['SERVER_NAME'] . '</a><br><br>
+                    <strong>Phone Number</strong> :' . $q_phone . '<br><br>
+                    <strong>Timezone</strong> :' . $timezoneSafe . '<br><br>
+                    <strong>Admin Email : </strong><a href="mailto:' . $adminEmail . '" target="_blank">' . $adminEmail . '</a><br><br>
+                    <b>Email :<a href="mailto:' . $fromEmail . '" target="_blank">' . $fromEmail . '</a></b><br><br>
+                    <b>Query</b>: ' . $queryWithMeta . '</b></div>';
+
         $fields = array(
-            'firstName' => $current_user->username,
-            'lastName' => '',
-            'company' => $_SERVER['SERVER_NAME'],
-            'email' => $q_email,
-            'ccEmail' => 'joomlasupport@xecurify.com',
-            'phone' => $q_phone,
-            'subject' => $subject,
-            'query' => $query
+            'customerKey' => $this->defaultCustomerKey,
+            'sendEmail' => true,
+            'email' => array(
+                'customerKey' => $this->defaultCustomerKey,
+                'fromEmail' => $fromEmail,
+                'fromName' => 'miniOrange',
+                'toEmail' => 'joomlasupport@xecurify.com',
+                'toName' => 'joomlasupport@xecurify.com',
+                'subject' => $subject,
+                'content' => $content
+            ),
         );
         $field_string = json_encode($fields);
 
@@ -248,7 +269,7 @@ class MocustomapiCustomer
 
     }
 
-    public static function submit_uninstall_feedback_form($email, $phone, $query,$cause)
+    public static function submit_uninstall_feedback_form($email, $phone, $query, $cause, $timezone = '')
     {
         $url = 'https://login.xecurify.com/moas/api/notify/send';
 
@@ -268,9 +289,12 @@ class MocustomapiCustomer
         
         $ccEmail = 'joomlasupport@xecurify.com';
         $bccEmail = 'joomlasupport@xecurify.com';
+        $timezone = trim((string) $timezone);
+        $timezoneLine = $timezone !== '' ? ('<strong>Timezone: </strong>' . htmlspecialchars($timezone, ENT_QUOTES, 'UTF-8') . '<br><br>') : '';
         $content = '<div>Hello, <br><br>'
                 . '<strong>Company: </strong><a href="' . $_SERVER['SERVER_NAME'] . '" target="_blank">' . $_SERVER['SERVER_NAME'] . '</a><br><br>'
                 . '<strong>Phone Number: </strong>' . $phone . '<br><br>'
+                . $timezoneLine
                 . '<strong>Admin Email: </strong><a href="mailto:' .$admin_email . '" target="_blank">' . $admin_email . '</a><br><br>'
                 . '<strong>Feedback: </strong>' . $query . '<br><br>'
                 . '<strong>Additional Details: </strong>' . $cause . '<br><br>'
@@ -336,7 +360,7 @@ class MocustomapiCustomer
         return $content;
     }
 
-    function request_for_trial($email, $plan,$demo,$description = '', $phone = '')
+    function request_for_trial($email, $plan,$demo,$description = '', $phone = '', $timezone = '')
     {
         $hostname = MocustomapiUtility::getHostname();
         $url = $hostname . '/moas/api/notify/send';
@@ -351,11 +375,14 @@ class MocustomapiCustomer
         $pluginInfo = '[Plugin '.$moPluginVersion.'| Joomla ' . $jCmsVersion.' | PHP ' . $phpVersion.'] : ' .$plan;
 
         $phoneInfo = !empty($phone) ? '<strong>Phone Number: </strong>' . $phone . '<br><br>' : '';
+        $timezone = trim((string) $timezone);
+        $timezoneInfo = $timezone !== '' ? '<strong>Timezone: </strong>' . htmlspecialchars($timezone) . '<br><br>' : '';
 
         $content = '<div >Hello, <br>
                         <br><strong>Company :</strong><a href="' . $_SERVER['SERVER_NAME'] . '" target="_blank" >' . $_SERVER['SERVER_NAME'] . '</a><br><br>
                         <strong>Email :</strong><a href="mailto:' . $fromEmail . '" target="_blank">' . $fromEmail . '</a><br><br>
                         ' . $phoneInfo . '
+                        ' . $timezoneInfo . '
                         <strong>Plugin Info: </strong>'.$pluginInfo.'<br><br>
                         <strong>Description: </strong>' . $description . '</div>';
 
